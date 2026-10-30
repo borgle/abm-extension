@@ -96,6 +96,7 @@ wsClient.updateConfig({
   autoReconnect: false,
 });
 const connected = wsClient.connect('http://127.0.0.1:18050');
+await new Promise((resolve) => setTimeout(resolve, 0));
 const socket = FakeWebSocket.instances[0];
 check(
   '连接路径使用 abm/1 子协议',

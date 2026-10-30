@@ -9,7 +9,7 @@
  *   但那样拿不到具体工具上下文）。
  */
 import { ERR } from '../constants.js';
-import { getTabWithGrace } from '../tabs.js';
+import { assertSessionTab, getSessionActiveTab, getTabWithGrace } from '../tabs.js';
 
 export class BaseTool {
   /** @type {string} */
@@ -36,21 +36,25 @@ export class BaseTool {
     return injection.result;
   }
 
-  /** 当前窗口的活动标签 */
-  async getActiveTab() {
+  /** 当前任务组内的活动标签；缺少上下文时退回窗口活动标签 */
+  async getActiveTab(context) {
+    if (context?.taskId) {
+      const tab = await getSessionActiveTab(context);
+      if (tab) return tab;
+    }
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     return tab;
   }
 
   /**
-   * 定位工具要操作的标签页：传了 tabId 就用它，否则用活动标签。
-   * 标签不存在时返回 undefined（调用方转成错误结果）。
+   * 定位工具要操作的标签页：传了 tabId 就用它，否则用任务组活动标签。
+   * 任务上下文存在时会校验标签归属，返回 undefined 表示标签不存在。
    */
-  async getTargetTab(tabId) {
-    // 传了 tabId 就等一小会儿（新建标签可能还没出现在 tabs.get 里），查不到返回 undefined
-    if (tabId !== undefined) return (await getTabWithGrace(tabId)) ?? undefined;
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    return tab;
+  async getTargetTab(tabId, context) {
+    if (tabId !== undefined) {
+      return (await assertSessionTab(tabId, context)) ?? undefined;
+    }
+    return this.getActiveTab(context);
   }
 
   /** 统一的失败结果 */

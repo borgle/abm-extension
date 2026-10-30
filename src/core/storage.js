@@ -23,6 +23,16 @@ export async function loadConnectionConfig() {
   return config;
 }
 
+export async function getOrCreateBrowserId() {
+  const stored = (await chrome.storage.local.get(STORAGE_KEY.browserId))[
+    STORAGE_KEY.browserId
+  ];
+  if (typeof stored === 'string' && stored) return stored;
+  const browserId = `browser_${crypto.randomUUID()}`;
+  await chrome.storage.local.set({ [STORAGE_KEY.browserId]: browserId });
+  return browserId;
+}
+
 export async function saveConnectionConfig(patch) {
   const current = await loadConnectionConfig();
   const next = {

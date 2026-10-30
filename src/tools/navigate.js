@@ -21,7 +21,7 @@
  */
 import { BaseTool, invalidArgs } from './base.js';
 import { STORAGE_KEY } from '../constants.js';
-import { ensureTabInAutoGroup, getTabWithGrace, isAutoGroupTab, waitForNavigationCommit, waitForTabLoad } from '../tabs.js';
+import { ensureSessionGroup, getTabWithGrace, isSessionTab, waitForNavigationCommit, waitForTabLoad } from '../tabs.js';
 import { resolveReusePlan, sortTabsByLastAccessed } from '../reuse.js';
 
 const REUSE_KEY_LIMIT = 50;
@@ -29,7 +29,7 @@ const REUSE_KEY_LIMIT = 50;
 export class NavigateTool extends BaseTool {
   name = 'browser_navigate';
 
-  async execute(args) {
+  async execute(args, context) {
     const {
       url,
       waitUntil = 'load',
@@ -48,7 +48,7 @@ export class NavigateTool extends BaseTool {
     try {
       const [currentTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
 
-      const reusableTab = plan.mode ? await this.findReusableTab(plan) : undefined;
+      const reusableTab = plan.mode ? await this.findReusableTab(plan, context) : undefined;
       const reused = Boolean(reusableTab?.id);
 
       // 复用标签时必须先挂上"等待提交"，再发起导航：
@@ -64,7 +64,9 @@ export class NavigateTool extends BaseTool {
 
       const tabId = tab.id;
       // 归组失败不影响导航本身（例如用户把分组功能关掉了）
-      await ensureTabInAutoGroup(tabId, { collapsed: automationGroupCollapsed }).catch(() => {});
+      await ensureSessionGroup(tabId, context, {
+      collapsed: automationGroupCollapsed ?? context?.collapsed,
+    }).catch(() => {});
       if (plan.mode === 'key') await this.rememberReuseKey(plan.key, tabId);
       if (committed) await committed;
 
@@ -106,19 +108,19 @@ export class NavigateTool extends BaseTool {
    *   2. 按站点 pattern 命中的 ABM 分组标签，取最近访问的一个
    * 当前活动标签也参与候选——它属于 ABM 分组时直接改地址即可。
    */
-  async findReusableTab(plan) {
+  async findReusableTab(plan, context) {
     if (plan.mode === 'key' && plan.key) {
       const mapped = await this.readReuseKey(plan.key);
       if (mapped !== undefined) {
         const tab = await getTabWithGrace(mapped, 300);
-        if (tab?.id && (await isAutoGroupTab(tab))) return tab;
+        if (tab?.id && (await isSessionTab(tab, context))) return tab;
       }
     }
     if (plan.patterns.length === 0) return undefined;
 
     const candidates = await chrome.tabs.query({ url: plan.patterns });
     for (const tab of sortTabsByLastAccessed(candidates)) {
-      if (await isAutoGroupTab(tab)) return tab;
+      if (await isSessionTab(tab, context)) return tab;
     }
     return undefined;
   }

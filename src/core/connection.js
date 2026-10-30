@@ -16,7 +16,7 @@ import {
   websocketUrl,
 } from '../constants.js';
 import { envelope, messageId, parseEnvelope } from './protocol.js';
-import { broadcastStatus, loadConnectionConfig } from './storage.js';
+import { broadcastStatus, getOrCreateBrowserId, loadConnectionConfig } from './storage.js';
 import { refreshBadge, saveNotice } from '../notices/manager.js';
 import { executeTool } from '../tools/registry.js';
 
@@ -106,6 +106,7 @@ class WebSocketClient {
       lastUpdated: Date.now(),
     });
 
+    const browserId = await getOrCreateBrowserId();
     this.connectPromise = new Promise((resolve) => {
       let settled = false;
       let readyTimer = null;
@@ -144,6 +145,11 @@ class WebSocketClient {
               apiKey: this.config.apiKey,
               extensionId: chrome.runtime.id,
               extensionVersion: chrome.runtime.getManifest().version,
+              browserId,
+              capabilities: {
+                tabGroups: Boolean(chrome.tabGroups),
+                sharedSessions: true,
+              },
             },
             messageId('hello'),
           ),
@@ -452,9 +458,10 @@ class WebSocketClient {
     const requestId = message.id;
     const name = message.payload?.name;
     const args = message.payload?.arguments || {};
+    const context = message.payload?.context || null;
     let response;
     try {
-      const result = await executeTool({ name, args });
+      const result = await executeTool({ name, args, context });
       const firstError = result.content?.find((item) => item.type === 'error');
       if (result.isError || firstError) {
         response = {

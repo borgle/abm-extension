@@ -57,8 +57,10 @@ export const EXECUTION_WORLD = Object.freeze({
 /** 仅用于扩展自身的 chrome.storage 命名空间 */
 export const STORAGE_KEY = Object.freeze({
   connectionConfig: 'abm.connection',
+  browserId: 'abm.browserId',
   noticePrefix: 'abm.notice:',
   automationGroupId: 'abm.automationGroupId',
+  sessionGroups: 'abm.sessionGroups',
   rejectedApiKey: 'abm.rejectedApiKey',
   shouldReconnect: 'abm.shouldReconnect',
   currentBaseUrl: 'abm.currentBaseUrl',

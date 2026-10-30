@@ -26,6 +26,7 @@
  *   browser_set_files_native        CDP 注入本机文件路径
  */
 import { ERR } from '../constants.js';
+import { assertSessionTab, getSessionActiveTab } from '../tabs.js';
 import { InjectScriptTool } from './inject-script.js';
 import { ReadPageDataTool } from './read-page-data.js';
 import { NavigateTool } from './navigate.js';
@@ -90,12 +91,48 @@ export function registerBuiltinTools() {
  * @param {{name: string, args?: object}} call
  * @returns {Promise<{content: Array<{type: string, text: string}>, isError: boolean}>}
  */
+const TAB_TOOLS = new Set([
+  'browser_inject_script',
+  'browser_read_page_data',
+  'browser_extract_data',
+  'browser_click',
+  'browser_fill',
+  'browser_keyboard',
+  'browser_upload_file',
+  'browser_set_files',
+  'browser_set_files_from_urls',
+  'browser_wait_elements',
+  'browser_set_video_to_page',
+  'browser_network_intercept',
+  'browser_mouse_click',
+  'browser_mouse_scroll',
+  'browser_input_sequence',
+  'browser_set_files_native',
+]);
+
+async function prepareTaskArgs(name, args, context) {
+  if (!context?.taskId || name === 'browser_navigate' || name === 'browser_control') {
+    return args;
+  }
+  if (!TAB_TOOLS.has(name)) return args;
+  if (typeof args.tabId === 'number') {
+    await assertSessionTab(args.tabId, context);
+    return args;
+  }
+  const active = await getSessionActiveTab(context);
+  if (!active?.id) {
+    throw new Error('No tab in this task group. Call browser_navigate first.');
+  }
+  return { ...args, tabId: active.id };
+}
+
 export async function executeTool(call) {
-  const { name, args } = call || {};
+  const { name, args, context } = call || {};
   const tool = registry.get(name);
   if (!tool) return { content: [{ type: 'error', text: `Tool not found: ${name}` }], isError: true };
   try {
-    return await tool.execute(args);
+    const prepared = await prepareTaskArgs(name, args || {}, context);
+    return await tool.execute(prepared, context);
   } catch (err) {
     return {
       content: [{ type: 'error', text: err instanceof Error ? err.message : ERR.toolFailed }],

@@ -6,24 +6,27 @@
  * 返回结构与各 action 一致，统一含 { success, action, ... }。
  */
 import { BaseTool } from './base.js';
+import { assertSessionTab, closeSessionGroup, getSessionGroupId } from '../tabs.js';
 
 export class BrowserControlTool extends BaseTool {
   name = 'browser_control';
 
-  async execute({ action, params }) {
+  async execute({ action, params }, context) {
     if (!action || !params) return this.createErrorResult('action and params are required');
     try {
       switch (action) {
         case 'close_tab':
-          return await this.closeTab(params);
+          return await this.closeTab(params, context);
         case 'get_tab':
-          return await this.getTab(params);
+          return await this.getTab(params, context);
         case 'update_tab':
-          return await this.updateTab(params);
+          return await this.updateTab(params, context);
         case 'query_tabs':
-          return await this.queryTabs(params);
+          return await this.queryTabs(params, context);
         case 'activate_tab':
-          return await this.activateTab(params);
+          return await this.activateTab(params, context);
+        case 'close_group':
+          return await this.closeGroup(context);
         default:
           return this.createErrorResult(`Unknown action: ${action}`);
       }
@@ -34,27 +37,36 @@ export class BrowserControlTool extends BaseTool {
 
   /** 只回传 AI 关心的字段，避免把 chrome.tabs.Tab 的其它内部字段塞进 MCP 结果 */
   static summarize(tab) {
-    return { id: tab.id, url: tab.url, title: tab.title, status: tab.status, active: tab.active };
+    return {
+      id: tab.id,
+      url: tab.url,
+      title: tab.title,
+      status: tab.status,
+      active: tab.active,
+      groupId: tab.groupId,
+    };
   }
 
-  async closeTab(params) {
+  async closeTab(params, context) {
     if (!params.tabId) return this.createErrorResult('tabId is required');
+    await assertSessionTab(params.tabId, context);
     await chrome.tabs.remove(params.tabId);
     return this.createTextResult(
       JSON.stringify({ success: true, action: 'close_tab', tabId: params.tabId }),
     );
   }
 
-  async getTab(params) {
+  async getTab(params, context) {
     if (!params.tabId) return this.createErrorResult('tabId is required');
-    const tab = await chrome.tabs.get(params.tabId);
+    const tab = await assertSessionTab(params.tabId, context);
     return this.createTextResult(
       JSON.stringify({ success: true, action: 'get_tab', tab: BrowserControlTool.summarize(tab) }),
     );
   }
 
-  async updateTab(params) {
+  async updateTab(params, context) {
     if (!params.tabId) return this.createErrorResult('tabId is required');
+    await assertSessionTab(params.tabId, context);
     const tab = await chrome.tabs.update(params.tabId, params.updateInfo || {});
     if (!tab) return this.createErrorResult(`Tab ${params.tabId} does not exist`);
     return this.createTextResult(
@@ -62,9 +74,9 @@ export class BrowserControlTool extends BaseTool {
     );
   }
 
-  async activateTab(params) {
+  async activateTab(params, context) {
     if (!params.tabId) return this.createErrorResult('tabId is required');
-    const tab = await chrome.tabs.get(params.tabId);
+    const tab = await assertSessionTab(params.tabId, context);
     // 窗口最小化时用户看不到激活效果，先还原窗口
     if (tab.windowId !== undefined) {
       const win = await chrome.windows.get(tab.windowId).catch(() => undefined);
@@ -84,8 +96,26 @@ export class BrowserControlTool extends BaseTool {
     );
   }
 
-  async queryTabs(params) {
-    const tabs = await chrome.tabs.query(params.queryInfo || {});
+  async closeGroup(context) {
+    if (!context?.taskId) return this.createErrorResult('close_group requires a task context');
+    const result = await closeSessionGroup(context);
+    return this.createTextResult(
+      JSON.stringify({ success: true, action: 'close_group', ...result }),
+    );
+  }
+
+  async queryTabs(params, context) {
+    const groupId = await getSessionGroupId(context);
+    if (context?.taskId && groupId === undefined) {
+      return this.createTextResult(
+        JSON.stringify({ success: true, action: 'query_tabs', tabs: [] }),
+      );
+    }
+    const queryInfo = { ...(params.queryInfo || {}) };
+    if (groupId !== undefined) queryInfo.groupId = groupId;
+    const tabs = (await chrome.tabs.query(queryInfo)).filter(
+      (tab) => groupId === undefined || tab.groupId === groupId,
+    );
     return this.createTextResult(
       JSON.stringify({
         success: true,

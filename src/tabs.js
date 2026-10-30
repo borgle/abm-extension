@@ -224,3 +224,110 @@ export async function clickAndWaitForNavigation(tabId, action, expectNavigation 
   }
   return { clicked: true, navigationOccurred: await navigation };
 }
+
+
+/* ---------------------------------------------------------------------------
+   Phase 2: one tab group per task session.
+   A task context is {taskId, groupTitle, collapsed}. Missing context keeps the
+   legacy single abm:browser group for older clients.
+--------------------------------------------------------------------------- */
+
+const GROUP_COLORS = ['blue', 'green', 'yellow', 'purple', 'cyan', 'orange', 'pink', 'red'];
+
+async function readSessionGroups() {
+  const stored = (await chrome.storage.local.get(STORAGE_KEY.sessionGroups))[
+    STORAGE_KEY.sessionGroups
+  ];
+  return stored && typeof stored === 'object' ? stored : {};
+}
+
+async function writeSessionGroups(map) {
+  await chrome.storage.local.set({ [STORAGE_KEY.sessionGroups]: map });
+}
+
+function groupColor(taskId) {
+  let hash = 0;
+  for (const char of String(taskId || '')) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return GROUP_COLORS[hash % GROUP_COLORS.length];
+}
+
+export async function getSessionGroupId(context) {
+  const taskId = context?.taskId;
+  if (!taskId) return undefined;
+  const map = await readSessionGroups();
+  const groupId = map[taskId];
+  if (typeof groupId !== 'number') return undefined;
+  try {
+    await chrome.tabGroups.get(groupId);
+    return groupId;
+  } catch {
+    delete map[taskId];
+    await writeSessionGroups(map);
+    return undefined;
+  }
+}
+
+export async function ensureSessionGroup(tabId, context, options = {}) {
+  const taskId = context?.taskId;
+  if (!taskId || !chrome.tabGroups || !chrome.tabs?.group) {
+    return ensureTabInAutoGroup(tabId, options);
+  }
+
+  let groupId = await getSessionGroupId(context);
+  const collapsed = options.collapsed ?? context.collapsed;
+  if (groupId === undefined) {
+    groupId = await chrome.tabs.group({ tabIds: [tabId] });
+    await chrome.tabGroups.update(groupId, {
+      title: String(context.groupTitle || `ABM ? ${String(taskId).slice(-8)}`).slice(0, 40),
+      color: groupColor(taskId),
+      collapsed: collapsed ?? false,
+    });
+    const map = await readSessionGroups();
+    map[taskId] = groupId;
+    await writeSessionGroups(map);
+  } else {
+    // Do not fight a user who expanded or collapsed the group manually.
+    await chrome.tabs.group({ tabIds: [tabId], groupId });
+  }
+  return groupId;
+}
+
+export async function isSessionTab(tab, context) {
+  if (!context?.taskId || !chrome.tabGroups) return isAutoGroupTab(tab);
+  const groupId = await getSessionGroupId(context);
+  return typeof tab.groupId === 'number' && tab.groupId >= 0 && tab.groupId === groupId;
+}
+
+export async function getSessionActiveTab(context) {
+  const groupId = await getSessionGroupId(context);
+  if (groupId === undefined) return undefined;
+  const tabs = (await chrome.tabs.query({})).filter((tab) => tab.groupId === groupId);
+  if (!tabs.length) return undefined;
+  const active = tabs.find((tab) => tab.active);
+  if (active) return active;
+  tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  return tabs[0];
+}
+
+export async function closeSessionGroup(context) {
+  const taskId = context?.taskId;
+  if (!taskId) return { closed: 0 };
+  const map = await readSessionGroups();
+  const groupId = map[taskId];
+  if (typeof groupId !== 'number') return { closed: 0 };
+  const tabs = (await chrome.tabs.query({})).filter((tab) => tab.groupId === groupId);
+  const ids = tabs.map((tab) => tab.id).filter((id) => typeof id === 'number');
+  if (ids.length) await chrome.tabs.remove(ids).catch(() => {});
+  delete map[taskId];
+  await writeSessionGroups(map);
+  return { closed: ids.length };
+}
+
+export async function assertSessionTab(tabId, context) {
+  const tab = await getTabWithGrace(tabId);
+  if (!tab) throw new Error(`Tab ${tabId} does not exist`);
+  if (context?.taskId && !(await isSessionTab(tab, context))) {
+    throw new Error('ABM_TAB_FORBIDDEN: this tab belongs to another task');
+  }
+  return tab;
+}
