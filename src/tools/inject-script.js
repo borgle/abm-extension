@@ -51,6 +51,17 @@ export function isCspEvalError(error) {
   return /content security policy/i.test(message) && /unsafe-eval/i.test(message);
 }
 
+/** chrome.scripting 在未授权域名上会抛权限错误；可改用 CDP 执行 */
+export function isHostPermissionError(error) {
+  if (!error) return false;
+  const message = String(error.message ?? '');
+  return (
+    /cannot access contents of url/i.test(message) ||
+    /extension manifest must request permission/i.test(message) ||
+    /cannot access a chrome-extension/i.test(message)
+  );
+}
+
 /** 把函数体源码包成 CDP 可直接求值的表达式；args 作为形参传入。 */
 export function buildCdpExpression(code, args) {
   return `(async function(args) {\n'use strict';\n${code}\n})(${JSON.stringify(args ?? {})})`;
@@ -104,22 +115,27 @@ export class InjectScriptTool extends BaseTool {
     await cleanupInjection(tabId);
     const source = toInjectableSource(code);
 
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['inject-scripts/inject-bridge.js'],
-      world: EXECUTION_WORLD.ISOLATED,
-    });
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['inject-scripts/main-world-executor.js'],
-      world: EXECUTION_WORLD.MAIN,
-    });
-
     let result;
     try {
-      result = await runCodeInMainWorld(tabId, source, codeArgs, EXECUTE_TIMEOUT_MS);
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['inject-scripts/inject-bridge.js'],
+        world: EXECUTION_WORLD.ISOLATED,
+      });
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['inject-scripts/main-world-executor.js'],
+        world: EXECUTION_WORLD.MAIN,
+      });
+
+      try {
+        result = await runCodeInMainWorld(tabId, source, codeArgs, EXECUTE_TIMEOUT_MS);
+      } catch (error) {
+        if (!isCspEvalError(error)) throw error;
+        result = await this.executeInMainWorldViaCdp(tabId, code, codeArgs);
+      }
     } catch (error) {
-      if (!isCspEvalError(error)) throw error;
+      if (!isCspEvalError(error) && !isHostPermissionError(error)) throw error;
       result = await this.executeInMainWorldViaCdp(tabId, code, codeArgs);
     }
     rememberInjection(tabId, EXECUTION_WORLD.MAIN);

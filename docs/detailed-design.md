@@ -64,7 +64,7 @@ stateDiagram-v2
 2. 使用子协议 `abm.v1` 创建 WebSocket。
 3. `open` 后发送 `session.hello`：
    ```json
-   {"apiKey":"abm_...","extensionId":"...","extensionVersion":"2.0.3"}
+   {"apiKey":"abm_...","extensionId":"...","extensionVersion":"2.0.4"}
    ```
 4. 等待 `session.ready`，超时 15 秒。
 5. 收到 `session.ready` 后：
@@ -198,6 +198,7 @@ stateDiagram-v2
 
 - 在 MAIN world 执行函数体或源码。
 - 页面 CSP 禁止 eval 时，使用 CDP `Runtime.evaluate` 兜底。
+- 目标页面未授予 host 权限时，同样使用 CDP 兜底；搜索引擎 host 权限在 manifest 中固定声明。
 - MV3 ISOLATED world 不能执行任意源码字符串；隔离世界只用于扩展内部桥和视频执行器。
 - 执行后清理注入桥，避免重复监听。
 

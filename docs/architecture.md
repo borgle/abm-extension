@@ -48,7 +48,7 @@ Manifest 关键项：
 | 项 | 用途 |
 |---|---|
 | `permissions` | `tabs`、`scripting`、`storage`、`webRequest`、`webNavigation`、`downloads`、`alarms`、`debugger`、`tabGroups`、`activeTab`、`nativeMessaging` |
-| `host_permissions` | 本机服务、官方服务、少量固定站点 |
+| `host_permissions` | 本机服务、官方服务、固定内容站点和搜索引擎（Bing、Baidu、DuckDuckGo、Google） |
 | `optional_host_permissions` | `<all_urls>`，用于按需下载域名 |
 | `externally_connectable` | 仅本机与 `borgle.io` 可信桥来源 |
 | `web_accessible_resources` | `/inject-scripts/*` |
@@ -178,7 +178,7 @@ flowchart TB
   - `reuseKey`：专属工作标签，同一 key 固定到一个标签。
 - 导航时先注册 `webNavigation.onCommitted` 再发起跳转，避免旧页面 `complete` 误判。
 - 注入默认在 ISOLATED world；需要页面全局时走 MAIN world 桥。
-- 页面 CSP 阻止 eval 时，`browser_inject_script` 使用 CDP 兜底。
+- 页面 CSP 阻止 eval 时，`browser_inject_script` 使用 CDP 兜底；未授予 host 权限时也使用 CDP 兜底。
 
 ## 8. CDP 与文件
 

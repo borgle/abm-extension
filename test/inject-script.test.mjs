@@ -7,6 +7,7 @@ import {
   buildCdpExpression,
   cdpErrorFromException,
   isCspEvalError,
+  isHostPermissionError,
 } from '../src/tools/inject-script.js';
 
 let failures = 0;
@@ -32,6 +33,24 @@ check(
 );
 check('普通页面错误不触发兜底', !isCspEvalError(new TypeError('x is not a function')));
 check('空值不触发兜底', !isCspEvalError(null));
+
+console.log('\n主机权限错误识别');
+check(
+  '识别 Cannot access contents of url',
+  isHostPermissionError(
+    new Error('Cannot access contents of url "https://example.com/".'),
+  ),
+);
+check(
+  '识别 manifest permission 文案',
+  isHostPermissionError(
+    new Error('Extension manifest must request permission to access this host.'),
+  ),
+);
+check(
+  '普通页面错误不触发 CDP 权限兜底',
+  !isHostPermissionError(new TypeError('x is not a function')),
+);
 
 console.log('\nCDP 表达式');
 const expression = buildCdpExpression('return args.x * 2;', { x: 21 });
