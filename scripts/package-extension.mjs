@@ -40,7 +40,7 @@ const publicKey = resolvePublicKey(readFileSync(keyPath, 'utf8'), configuredPubl
 
 const buildDir = path.join(root, 'build');
 const stagingDir = path.join(buildDir, 'extension');
-const baseName = `abm-browser-extension-${version}`;
+const baseName = `abm-extension-${version}`;
 const zipPath = path.join(buildDir, `${baseName}.zip`);
 const crxPath = path.join(buildDir, `${baseName}.crx`);
 const shaPath = path.join(buildDir, `${baseName}.sha256`);

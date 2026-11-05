@@ -1,5 +1,5 @@
 {
-  "name": "abm-browser-extension",
+  "name": "abm-extension",
   "version": "2.0.4",
   "private": true,
   "description": "ABM（a browser mcp） 浏览器扩展",
