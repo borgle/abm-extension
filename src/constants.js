@@ -100,7 +100,7 @@ export const RECONNECT = Object.freeze({
 export const NOTICE_LIMIT = 20;
 
 export const PROJECT_LINKS = Object.freeze({
-  repo: 'https://github.com/borgle/browser-mcp-extension',
+  repo: 'https://github.com/borgle/abm-extension',
   docsPath: 'blob/main/README.md',
   issuesPath: 'issues',
 });

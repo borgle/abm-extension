@@ -120,5 +120,5 @@ Chrome 外部消息访问连接配置或视频桥能力。当前可信来源为 
 ```text
 运营主体：Borgle（个人开发者）
 联系邮箱：wu@borgle.io
-项目地址：https://github.com/borgle/browser-mcp-extension
+项目地址：https://github.com/borgle/abm-extension
 ```

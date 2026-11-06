@@ -1,6 +1,6 @@
 # ABM 浏览器扩展文档索引
 
-本目录是 `browser-mcp-extension` 的设计与操作文档。服务端文档位于配套仓库 `browser-mcp-server/docs/`。
+本目录是 `abm-extension` 的设计与操作文档。服务端文档位于配套仓库 `abm-server/docs/`。
 
 ## 文档地图
 
@@ -55,10 +55,10 @@
 
 服务端对应文档：
 
-- `browser-mcp-server/docs/architecture.md`
-- `browser-mcp-server/docs/detailed-design.md`
-- `browser-mcp-server/docs/data-flow.md`
-- `browser-mcp-server/docs/scenarios.md`
+- `abm-server/docs/architecture.md`
+- `abm-server/docs/detailed-design.md`
+- `abm-server/docs/data-flow.md`
+- `abm-server/docs/mcp-agent-guide.md`
 
 ## 维护规则
 

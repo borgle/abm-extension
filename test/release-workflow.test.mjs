@@ -31,6 +31,7 @@ check('Release notes 支持人工文件覆盖', workflow.includes('.github/relea
 check('Release notes 通过 GitHub API 读取提交与作者', workflow.includes('gh api'));
 check('Release notes 传入上一个版本标签', workflow.includes('--previous-tag'));
 check('提交范围从上一个版本标签开始', workflow.includes('git describe --tags'));
+check('产物包名使用 abm-extension', workflow.includes('build/abm-extension-${version}.zip') && !workflow.includes('abm-browser-extension'));
 
 if (failures > 0) {
   console.error(`\n${failures} 项失败。`);

@@ -3,7 +3,7 @@
  *
  * 用途：popup 只能在 chrome-extension:// 里打开（浏览器策略不允许自动化访问），
  * 这个预览页把它搬到 http 下，用假数据驱动，便于设计走查与截图核对。
- * 产物写到后端的静态目录（被 .gitignore 忽略），用浏览器打开即可。
+ * 产物写到 build/popup-preview.html（被 .gitignore 忽略），用浏览器打开即可。
  *
  * 运行：npm run preview
  */

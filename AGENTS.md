@@ -6,10 +6,10 @@ ABM 是 **a browser mcp** 的简称。
 
 修改代码前先阅读：
 
-1. 配套 `browser-mcp-server` 仓库中的 `docs/architecture.md`。
+1. 配套 `abm-server` 仓库中的 `docs/architecture.md`。
 2. 本仓库的 `docs/architecture.md`、`docs/detailed-design.md`。
 3. `docs/data-flow.md` 与 `docs/scenarios.md` 中受影响链路。
-4. 配套仓库中的 `docs/development-plan.md`。
+4. 配套 `abm-server` 仓库中的 `docs/detailed-design.md` 与 `docs/data-flow.md`。
 5. 当前模块的 README、manifest 与测试。
 
 两个仓库完全独立，只通过文档化的 HTTP、WebSocket 和扩展外部消息契约通信。
@@ -47,19 +47,19 @@ ABM 是 **a browser mcp** 的简称。
 
 ## 模块边界
 
-- `core/protocol.js`：信封校验、消息构造和错误码。
-- `core/connection.js`：连接生命周期、心跳、退避和替换处理。
-- `core/storage.js`：统一访问 `abm.*` 设置和运行状态。
-- `core/ui-language.js`：页面 toast 语言解析（`abm.lang` 优先，其次 Chrome UI 语言，非中文回退英文）。
-- `core/lifecycle.js`：service worker 初始化和恢复。
-- `core/external.js`：受信网页外部消息入口；一键连接校验来源同源并写入配置。
-- `tools/registry.js`：工具注册与分发。
-- `tools/*.js`：浏览器、DOM、上传、CDP 和页面数据操作（19 个扩展工具）。
-- `tabs.js` / `reuse.js`：标签等待、自动分组和复用范围。
-- `cdp.js` / `injectable.js`：CDP 生命周期和 MAIN/ISOLATED 注入。
-- `video/receiver.js` / `video/store.js`：视频桥外部消息和内存暂存。
-- `permissions/`：Chrome 域名权限管理。
-- `notices/`：通知持久化与角标状态。
+- `src/core/protocol.js`：信封校验、消息构造和错误码。
+- `src/core/connection.js`：连接生命周期、心跳、退避和替换处理。
+- `src/core/storage.js`：统一访问 `abm.*` 设置和运行状态。
+- `src/core/ui-language.js`：页面 toast 语言解析（`abm.lang` 优先，其次 Chrome UI 语言，非中文回退英文）。
+- `src/core/lifecycle.js`：service worker 初始化和恢复。
+- `src/core/external.js`：受信网页外部消息入口；一键连接校验来源同源并写入配置。
+- `src/tools/registry.js`：工具注册与分发。
+- `src/tools/*.js`：浏览器、DOM、上传、CDP 和页面数据操作（19 个扩展工具）。
+- `src/tabs.js` / `src/reuse.js`：标签等待、自动分组和复用范围。
+- `src/cdp.js` / `src/injectable.js`：CDP 生命周期和 MAIN/ISOLATED 注入。
+- `src/video/receiver.js` / `src/video/store.js`：视频桥外部消息和内存暂存。
+- `src/permissions/`：Chrome 域名权限管理。
+- `src/notices/`：通知持久化与角标状态。
 - `popup/`：概览、设置、通知、账号入口和关于。
 - `popup/i18n.js`：popup 中英文词典、语言持久化和错误文案映射。
 - `_locales/`：扩展名称/描述的中英文 manifest 资源。

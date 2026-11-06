@@ -1,6 +1,6 @@
 # ABM 浏览器扩展详细设计
 
-> 本文描述 `browser-mcp-extension` 的内部实现。协议字段和服务端契约见 [architecture.md](architecture.md)。
+> 本文描述 `abm-extension` 的内部实现。协议字段和服务端契约见 [architecture.md](architecture.md)。
 
 ## 1. 设计目标与约束
 
@@ -14,7 +14,7 @@
 
 `src/background.js` 只做一件事：调用 `startLifecycle()`。
 
-`core/lifecycle.js` 的初始化顺序：
+`src/core/lifecycle.js` 的初始化顺序：
 
 ```mermaid
 flowchart TD
@@ -43,7 +43,7 @@ flowchart TD
 
 ## 3. 连接状态机
 
-`core/connection.js` 的 `WebSocketClient` 状态：
+`src/core/connection.js` 的 `WebSocketClient` 状态：
 
 ```mermaid
 stateDiagram-v2
@@ -104,7 +104,7 @@ stateDiagram-v2
 
 ## 4. 协议处理
 
-`core/protocol.js`：
+`src/core/protocol.js`：
 
 - `envelope(type, payload, id)` 构造 `{v:"abm/1", id, type, payload}`。
 - `parseEnvelope(text)` 校验：
@@ -145,7 +145,7 @@ stateDiagram-v2
 
 ## 5. 工具注册与执行
 
-`tools/registry.js`：
+`src/tools/registry.js`：
 
 - `registerTool(tool)`：按 `tool.name` 写入 Map。
 - `registerBuiltinTools()`：注册 19 个内置工具。
@@ -153,7 +153,7 @@ stateDiagram-v2
   - 找不到工具 → `{isError:true, content:[{type:"error",text:"Tool not found"}]}`。
   - 调用 `tool.execute(args)`，异常统一包成错误结果。
 
-`tools/base.js`：
+`src/tools/base.js`：
 
 - `executeInTab(tabId, func, args, world)`：`chrome.scripting.executeScript`，默认 ISOLATED。
 - `getActiveTab` / `getTargetTab`：显式 `tabId` 优先，否则当前活动标签。
@@ -172,7 +172,7 @@ stateDiagram-v2
 | `browser_navigate` | URL 复用计划、自动分组、导航提交等待、load/DOMContentLoaded/networkidle |
 | `browser_control` | `close_tab` / `get_tab` / `update_tab` / `query_tabs` / `activate_tab` |
 
-`browser_navigate` 的复用计划来自 `reuse.js`：
+`browser_navigate` 的复用计划来自 `src/reuse.js`：
 
 - `site`：复用同主机标签，忽略 `www.` / `m.` / `mobile.`，不跨子域。
 - `origin`：协议、主机、端口完全一致。
@@ -252,7 +252,7 @@ Base64 上传在页面主环境组装 `File`，不经过网络。URL 上传由�
 | `browser_input_sequence` | 按 `after` 延迟回放鼠标/键盘/文本事件 |
 | `browser_set_files_native` | `DOM.setFileInputFiles` |
 
-CDP 生命周期 `cdp.js`：
+CDP 生命周期 `src/cdp.js`：
 
 - attach 前先 detach 残留会话。
 - attach 后用 `Runtime.evaluate` 探活，失败则重建。
@@ -265,7 +265,7 @@ CDP 生命周期 `cdp.js`：
 
 ### 7.1 暂存区
 
-`video/store.js`：
+`src/video/store.js`：
 
 - 内存单例 `storedVideo`：`{fileName, fileType, fileSize, data, storedAt}`。
 - TTL 30 分钟；服务 worker 回收即丢失。
@@ -275,7 +275,7 @@ CDP 生命周期 `cdp.js`：
 
 ### 7.2 Bridge 外部消息
 
-`video/receiver.js` 只处理可信来源：
+`src/video/receiver.js` 只处理可信来源：
 
 - 可信来源来自 `manifest.externally_connectable.matches`。
 - 若 manifest 过于宽泛（`<all_urls>`），回退到 `DEFAULT_BRIDGE_KEY_PATTERNS`。
@@ -296,7 +296,7 @@ CDP 生命周期 `cdp.js`：
 
 上传会话 30 分钟未完成自动清理。
 
-控制台一键连接使用 `abm.connection.configure`：只有受信来源且 `sender.origin` 与 `payload.serverBaseUrl` 同源时才接受；扩展先保存 `abm.connection`，再发起 WebSocket 连接。视频消息仍由 `handleExternalMessage` 处理，非视频消息由 `core/external.js` 分发。
+控制台一键连接使用 `abm.connection.configure`：只有受信来源且 `sender.origin` 与 `payload.serverBaseUrl` 同源时才接受；扩展先保存 `abm.connection`，再发起 WebSocket 连接。视频消息仍由 `handleExternalMessage` 处理，非视频消息由 `src/core/external.js` 分发。
 
 ### 7.3 URL 下载
 
@@ -316,7 +316,7 @@ URL 源视频优先使用这条通道：服务端只传原始 URL，视频字节
 
 1. 从暂存区取视频；没有则返回 `needUpload`。
 2. 等待目标 file input。
-3. 注入 `inject-bridge.js`（ISOLATED）和 `main-world-executor.js`（MAIN）。
+3. 注入 `inject-scripts/inject-bridge.js`（ISOLATED）和 `inject-scripts/main-world-executor.js`（MAIN）。
 4. MAIN world 初始化接收器。
 5. 每片 20MB 通过 `tabs.sendMessage` 传入，页面显示进度 toast；toast 语言跟随 `abm.lang`，未设置时按 Chrome UI 语言（其他语言回退英文）。
 6. MAIN world 组装 `File` 并写入 input。
@@ -324,7 +324,7 @@ URL 源视频优先使用这条通道：服务端只传原始 URL，视频字节
 
 ## 8. 权限管理
 
-`permissions/manager.js`：
+`src/permissions/manager.js`：
 
 - manifest 静态 host 权限不可撤销，不进入管理列表。
 - 本机地址（`127.0.0.1`、`localhost`）视为内置 host。
@@ -337,7 +337,7 @@ URL 源视频优先使用这条通道：服务端只传原始 URL，视频字节
 
 ## 9. 通知
 
-`notices/manager.js`：
+`src/notices/manager.js`：
 
 - 存储键：`abm.notice:<id>`。
 - 对象：`{id,title,level,body,actionUrl,receivedAt,read}`。
@@ -452,20 +452,20 @@ URL 源视频优先使用这条通道：服务端只传原始 URL，视频字节
 新增一个扩展工具：
 
 1. 在 `src/tools/` 新建类，继承 `BaseTool`，实现 `name` 和 `execute`。
-2. 在 `tools/registry.js` 注册。
-3. 在服务端 `tools/browser.py` 定义同 Schema。
+2. 在 `src/tools/registry.js` 注册。
+3. 在服务端 `abm_server/tools/browser.py` 定义同 Schema。
 4. 更新 `test/parity.mjs`、协议测试和文档。
 5. 在 Chrome 中验证标签/页面行为。
 
 修改连接协议：
 
-1. 更新 `constants.js`、`protocol.js`、`connection.js`。
-2. 更新服务端 `extension_gateway/protocol.py` 与 gateway。
+1. 更新 `src/constants.js`、`src/core/protocol.js`、`src/core/connection.js`。
+2. 更新服务端 `abm_server/extension_gateway/protocol.py` 与 `abm_server/extension_gateway/gateway.py`。
 3. 更新两仓库契约测试。
 4. 更新 `data-flow.md` 和 `scenarios.md`。
 
 修改视频桥：
 
-1. 更新 `video/receiver.js`、`constants.js` 和服务端视频服务。
+1. 更新 `src/video/receiver.js`、`src/constants.js` 和服务端 `abm_server/video/service.py`。
 2. 更新 `test/bridge-video.test.mjs`、`test/bridge-origin.test.mjs`。
 3. 在真实 Chrome 中验证分片、进度、注入和权限。

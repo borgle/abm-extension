@@ -1,4 +1,4 @@
-# browser-mcp 图标
+# abm-extension 图标
 
 图形语言：一个白色「浏览器窗口」里放一枚品牌色标记——窗口代表浏览器控制权，标记代表 AI 在驱动它。
 窗口带一条工具条（含三个圆点）和一层向下淡出的柔影，底色是品牌渐变，
@@ -7,7 +7,7 @@
 标记有三种候选（`--variant`）：`spark` AI 火花（设计源默认）、`cursor` 鼠标指针（强调自动点击）、
 `bridge` 节点连接（强调 MCP 桥接）。
 
-> **仓库里当前提交的是 `mcp` 配色（蓝 `#2563EB`，与 popup 主色一致）+ `cursor` 指针变体**
+> **仓库里当前提交的是 `abm` 配色（纸墨酸绿，与品牌视觉一致）+ `cursor` 指针变体**
 > ——即 `npm run icon:build:shipped` 的结果。换配色/图形见下方命令，
 > 改完请把这一段一起更新（这几行说的就是仓库里实际提交的那套）。
 
@@ -55,7 +55,7 @@ npm install
 ```bash
 npm run icon:lab                          # 打开 canvas 工作台：改配色/图形/尺寸，实时预览与导出
 npm run icon:build                        # 按当前参数重写 icons/ 下的 SVG、PNG 与对照图（xhs 红）
-npm run icon:build:shipped                # 仓库当前提交的组合：mcp 蓝 + cursor 指针
+npm run icon:build:shipped                # 仓库当前提交的组合：abm 纸墨酸绿 + cursor 指针
 npm run icon:build:mcp                    # 只换配色：mcp（蓝，与 popup 主色一致）
 npm run icon:build:ink                    # 换配色：ink（深色）
 node tools/icon-build.mjs --theme=mcp --variant=cursor   # 需要其它组合时直接调脚本（spark / cursor / bridge）

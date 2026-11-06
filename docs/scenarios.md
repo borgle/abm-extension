@@ -1,6 +1,6 @@
 # ABM 浏览器扩展使用场景
 
-> 本文从扩展使用者/开发者视角给出典型场景。工具参数以配套 `browser-mcp-server` 仓库的 `docs/architecture.md` 和 `docs/scenarios.md` 为准。
+> 本文从扩展使用者/开发者视角给出典型场景。工具参数以配套 `abm-server` 仓库的 `docs/architecture.md` 和 `docs/mcp-agent-guide.md` 为准。
 
 ## 0. 前置条件
 

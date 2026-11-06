@@ -69,7 +69,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: abm-browser-extension
+          name: abm-extension
           path: |
             build/*.zip
             build/*.crx
@@ -105,9 +105,9 @@ jobs:
         run: |
           version="$(node -p "require('./manifest.json').version")"
           gh release create "$GITHUB_REF_NAME" \
-            "build/abm-browser-extension-${version}.zip" \
-            "build/abm-browser-extension-${version}.crx" \
-            "build/abm-browser-extension-${version}.sha256" \
+            "build/abm-extension-${version}.zip" \
+            "build/abm-extension-${version}.crx" \
+            "build/abm-extension-${version}.sha256" \
             --title "ABM Browser Extension v${version}" \
             --notes-file "${RUNNER_TEMP}/abm-release-notes.md"
 

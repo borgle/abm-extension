@@ -1,6 +1,6 @@
 # ABM 浏览器扩展架构设计
 
-> 本文定义 `browser-mcp-extension` 的系统边界、组件和公开契约。实现细节、时序图和操作示例见 [detailed-design.md](detailed-design.md)、[data-flow.md](data-flow.md)、[scenarios.md](scenarios.md)。
+> 本文定义 `abm-extension` 的系统边界、组件和公开契约。实现细节、时序图和操作示例见 [detailed-design.md](detailed-design.md)、[data-flow.md](data-flow.md)、[scenarios.md](scenarios.md)。
 
 ## 1. 定位
 
@@ -10,7 +10,7 @@ ABM 是 **a browser mcp** 的简称。本仓库是 ABM 的 Chrome 扩展端：
 - 通过 `abm/1` WebSocket 接收已认证的工具调用。
 - 在用户本机执行标签、DOM、CDP、上传、网络和视频操作。
 - 不保存账号密码或账号会话 Cookie。
-- 不实现服务端账号、MCP 或 OAuth；这些属于 `browser-mcp-server`。
+- 不实现服务端账号、MCP 或 OAuth；这些属于 `abm-server`。
 
 ## 2. 系统上下文
 
@@ -36,7 +36,7 @@ flowchart LR
 
 - Manifest V3，`background.type = module`。
 - 没有 build 步骤；源码直接加载。
-- service worker 入口：`src/background.js` → `core/lifecycle.js`。
+- service worker 入口：`src/background.js` → `src/core/lifecycle.js`。
 - Chrome 可随时回收 service worker；扩展必须依赖持久化配置和 Chrome 事件恢复。
 - 页面脚本按需通过 `chrome.scripting.executeScript` 注入：
   - `ISOLATED`：扩展内部桥、视频接收器。
@@ -105,23 +105,23 @@ flowchart TB
 
 | 模块 | 职责 |
 |---|---|
-| `core/lifecycle.js` | 初始化工具、监听器、权限、通知、连接和闹钟恢复 |
-| `core/connection.js` | WebSocket 连接状态机、鉴权、心跳、退避、替换、Key 失效 |
-| `core/protocol.js` | `abm/1` 信封构造与校验 |
-| `core/storage.js` | `abm.connection` 读写、状态广播 |
-| `core/ui-language.js` | 页面 toast 语言解析（`abm.lang` 优先，其次 Chrome UI 语言，非中文回退英文） |
-| `tools/registry.js` | 工具名到实例的注册表与分发 |
-| `tools/base.js` | 注入、标签定位、等待、统一结果 |
-| `tools/*.js` | 19 个浏览器工具实现 |
-| `tabs.js` | 标签查询宽限、自动分组、加载/导航等待 |
-| `reuse.js` | 标签复用范围纯函数（site / origin / key） |
-| `cdp.js` | `chrome.debugger` 生命周期、命令超时、空闲 detach |
-| `injectable.js` | MAIN/ISOLATED 注入、清理、异步包装 |
-| `video/receiver.js` | 受信外部消息、分片会话、视频暂存 |
-| `video/store.js` | 内存暂存区、30 分钟 TTL、20GB 上限 |
-| `permissions/manager.js` | 可选 host 权限、`<all_urls>`、实际权限对账 |
-| `notices/manager.js` | 通知持久化、未读角标、上限与清理 |
-| `popup-messages.js` | popup 消息处理、配置、权限、连接 |
+| `src/core/lifecycle.js` | 初始化工具、监听器、权限、通知、连接和闹钟恢复 |
+| `src/core/connection.js` | WebSocket 连接状态机、鉴权、心跳、退避、替换、Key 失效 |
+| `src/core/protocol.js` | `abm/1` 信封构造与校验 |
+| `src/core/storage.js` | `abm.connection` 读写、状态广播 |
+| `src/core/ui-language.js` | 页面 toast 语言解析（`abm.lang` 优先，其次 Chrome UI 语言，非中文回退英文） |
+| `src/tools/registry.js` | 工具名到实例的注册表与分发 |
+| `src/tools/base.js` | 注入、标签定位、等待、统一结果 |
+| `src/tools/*.js` | 19 个浏览器工具实现 |
+| `src/tabs.js` | 标签查询宽限、自动分组、加载/导航等待 |
+| `src/reuse.js` | 标签复用范围纯函数（site / origin / key） |
+| `src/cdp.js` | `chrome.debugger` 生命周期、命令超时、空闲 detach |
+| `src/injectable.js` | MAIN/ISOLATED 注入、清理、异步包装 |
+| `src/video/receiver.js` | 受信外部消息、分片会话、视频暂存 |
+| `src/video/store.js` | 内存暂存区、30 分钟 TTL、20GB 上限 |
+| `src/permissions/manager.js` | 可选 host 权限、`<all_urls>`、实际权限对账 |
+| `src/notices/manager.js` | 通知持久化、未读角标、上限与清理 |
+| `src/popup-messages.js` | popup 消息处理、配置、权限、连接 |
 | `popup/` | 概览、权限、关于三个视图 |
 | `inject-scripts/` | ISOLATED 桥与 MAIN world 执行器 |
 
@@ -193,7 +193,7 @@ flowchart TB
 ## 9. 视频
 
 - URL 源视频由扩展直接下载原始地址，服务端不接触视频字节；base64 源才由服务端临时托管。
-- 视频桥和 URL 下载最终都写入 `video/store.js` 的内存暂存区。
+- 视频桥和 URL 下载最终都写入 `src/video/store.js` 的内存暂存区。
 - 桥消息只接受 manifest 声明的来源。
 - `abm.bridge.config` 只返回短期 bridge token，不把 API Key 交给页面；token 由扩展用 API Key 向服务端换取。
 - 分片通过 `chrome.tabs.sendMessage` 传入 MAIN world，逐片组装成 `File` 并写入 input。
@@ -241,10 +241,10 @@ flowchart TB
 
 对应服务端文档：
 
-- `browser-mcp-server/docs/architecture.md`
-- `browser-mcp-server/docs/detailed-design.md`
-- `browser-mcp-server/docs/data-flow.md`
-- `browser-mcp-server/docs/scenarios.md`
+- `abm-server/docs/architecture.md`
+- `abm-server/docs/detailed-design.md`
+- `abm-server/docs/data-flow.md`
+- `abm-server/docs/mcp-agent-guide.md`
 
 协议变化必须同时更新两仓库的契约测试和文档。
 
